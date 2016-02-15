@@ -1,0 +1,226 @@
+---
+title: "車險投保"
+author: "許sir"
+
+
+---
+
+### **資料說明**
+#### 1.本單元主題僅在介紹基本指令，以及變數的轉換
+
+#### 2.Insurance是某保險公司在1973年第三季車險投保人資訊，共有五個變數
+#### - District 投保人家庭住址區域
+#### - Group 汽車排氣量
+#### - Age 年齡
+#### - Holders 投保人數量
+#### - Claims 要求索賠的投保人數量
+
+---
+
+### **[設定所需的函式庫(libraries)以及載入資料]**
+```{r message=FALSE, warning=FALSE, results='hide'}
+setwd("/home/m600/Working Area/Rdata Practice/Customer Course/Insurance")
+library ( MASS )                                  # 載入含有資料集的軟體包MASS
+data ( Insurance )                                          # 取得資料集Insurance
+```
+
+### **[Part 1].Data-ETL**
+
+#### **1-1.取得資料集的維度**
+```{r message=FALSE, warning=FALSE}
+dim ( Insurance )                                             # 取得資料集的維度
+dim ( Insurance[1:10, ] )                            # 取得資料集前10條資料的維度
+dim ( Insurance[ ,2:4] )                 # 取得資料集僅含第2、3、4個變數部分的維度
+dim ( Insurance ) [1]                     # 取得資料集維度向量的第一個元素，即行數
+dim ( Insurance ) [2]                     # 取得資料集維度向量的第二個元素，即列數
+```
+
+#### **1-2.篩選資料**
+```{r message=FALSE, warning=FALSE}
+vars = c ( "District", "Age" )     # 建構含有“District”和“Age”兩個元素的字元向量vars
+Insurance [ 20:25, vars ]                 # 篩選出District及Age變數的第20-25行資料
+
+names ( Insurance )                                  # 輸出Insurance資料集變數名
+head ( names(Insurance), n=2 )                                # 僅輸出前2個變數名
+tail ( names(Insurance), n=2 )                                # 僅輸出後2個變數名
+head ( Insurance$Age )                              # 僅輸出Age變數前許多條資料
+```
+
+#### **1-3.變數型態**
+```{r message=FALSE, warning=FALSE}
+class ( Insurance$District )                                # 顯示District的變數型態
+class ( Insurance$Age )                                      # 顯示Age的變數型態
+class ( Insurance$Holders )                                # 顯示Holders的變數型態
+```
+
+#### **1-4.修改變數**
+```{r message=FALSE, warning=FALSE}
+levels ( Insurance$Age )                                #  顯示Age變數的4個水平值
+levels ( Insurance$Age) [1]                            # 顯示Age變數的第1個水平值
+levels ( Insurance$Age ) [1] = "young"        # 將Age變數的第1個水平值修改為“young”
+head ( Insurance$Age )                          #回看修改後Age變數前許多個取值
+```
+
+#### **1-5.再次判斷變數型態**
+```{r message=FALSE, warning=FALSE}
+is.character ( Insurance$Age )                           # 判斷Age是否為字元型變數
+class ( Insurance$Claims )                                  # 顯示Claims的變數型態
+class ( as.numeric (Insurance$Claims) )         # 將Claims的資料型態強制轉為數值型
+```
+
+---
+### **[Part 2].抽樣方法**
+```{r message=FALSE, warning=FALSE}
+library(base)
+```
+
+#### **2-1.簡單隨機抽樣**
+
+#### **2-1-1.抽後放回**
+```{r message=FALSE, warning=FALSE}
+sub1=sample(nrow(Insurance),10,replace=T)
+Insurance[sub1,]
+
+sub2=sample(nrow(Insurance),10,replace=T,prob=c(rep(0,nrow(Insurance)-1),1))
+Insurance[sub2,]
+
+```
+
+#### **2-1-1.抽後不放回**
+```{r message=FALSE, warning=FALSE}
+sub3=sample(nrow(Insurance),nrow(Insurance))
+Insurance[sub3,]
+```
+
+#### **2-2.分層抽樣**
+
+
+- method共有四種選項，其中常用的是srswor(抽後不放回)、srswr(抽後放回)
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("sampling")
+library(sampling)
+
+sub4=strata(Insurance,stratanames="District",size=c(1,2,3,4),method="srswor")
+#按District進行分層，且1-4區中抽後不放回取出1-4個樣本
+
+sub4 #顯示分層結果
+getdata(Insurance,sub4)
+
+sub5=strata(Insurance,stratanames="District",size=c(1,2,3,4),description=TRUE)
+sub5
+getdata(Insurance,sub5)
+
+sub6=strata(Insurance,stratanames="District",size=c(1,2,3,4),method="systematic",pik=Insurance$Claims)
+sub6
+getdata(Insurance,sub6)
+
+```
+
+#### **2-3.分群抽樣**
+```{r message=FALSE, warning=FALSE}
+sub7=cluster(Insurance,clustername="District",size=2,method="srswor",description=TRUE)
+sub7
+getdata(Insurance,sub7)
+
+```
+
+---
+### **[Part 3].資料視覺化**
+
+#### **3-1.數字化探索**
+```{r message=FALSE, warning=FALSE}
+names(Insurance)
+attributes(Insurance)
+str(Insurance)
+summary(Insurance)
+
+#install.packages("Hmisc")
+library(Hmisc)
+describe(Insurance[,1:3])
+describe(Insurance[,4:5])
+```
+
+#### **3-2.直方圖 MASS**
+```{r message=FALSE, warning=FALSE}
+hist(Insurance$Claims,main="Histogram of Freq of Insurance$Claims")
+
+hist(Insurance$Claims,freq=FALSE,density=20,
+     main="Histogram of Density of Insurance$Claims")
+lines(density(Insurance$Claims))
+
+str(hist(Insurance$Claims,breaks=20,labels = TRUE,
+         col="black",border="white",
+         main="Histogram of Insurance$Claims with 20 bars"))
+```
+
+#### **3-3.累積分佈圖 Hmisc**
+```{r message=FALSE, warning=FALSE}
+library(Hmisc)
+
+Ecdf(Insurance$Claims,xlab="Claims",main="Cumulative Distribution of Claims")
+
+```
+
+#### **3-4.箱型圖**
+```{r message=FALSE, warning=FALSE}
+Claims_bp=boxplot(Insurance$Claims,main="Distribution of Claims")
+Claims_bp$stats
+
+```
+
+#### **3-5.條形圖**
+```{r message=FALSE, warning=FALSE}
+Claims_Age = with(Insurance,
+                c( sum(Claims[which(Age=="<25")]), sum(Claims[which(Age=="25-29")]),
+                   sum(Claims[which(Age=="30-35")]), sum(Claims[which(Age==">35")]) ) )
+ 
+barplot(Claims_Age, names.arg=c("<25","25-29","30-35",">35"),density=rep(20,4),
+        main="Distribution of Age by Claims", xlab="Age", ylab="Claims")
+
+Holders_Age = with(Insurance,
+                c( sum(Holders[which(Age=="<25")]), sum(Holders[which(Age=="25-29")]),
+                   sum(Holders[which(Age=="30-35")]), sum(Holders[which(Age==">35")]) ) )
+Holders_Age
+data_bar = rbind(Claims_Age,Holders_Age)
+data_bar
+barplot(data_bar, names.arg=c("<25","25-29","30-35",">35"),beside=TRUE,
+        main="Age Distribution by Claims and Holders",
+        xlab="Age", ylab="Claims&Holders", col=c("black","darkgrey"))
+legend(x="topleft", rownames(data_bar), fill = c("black","darkgrey"))
+
+barplot(data_bar, names.arg=c("<25","25-29","30-35",">35"),
+        main="Age Distribution by Claims and Holders",
+       ylab="Claims&Holders", col=c("black","darkgrey"))
+legend(x="topleft", rownames(data_bar), fill = c("black","darkgrey"))
+
+```
+
+#### **3-6.點陣圖**
+```{r message=FALSE, warning=FALSE}
+dotchart(data_bar,xlab="Claims&Holders", pch=1:2,
+         main="Age Distribution by Claims and Holders")
+legend(x=14000,y=15,"<25",bty="n")
+legend(x=14000,y=11,"25-29",bty="n")
+legend(x=14000,y=7,"30-35",bty="n")
+legend(x=14000,y=3,">35",bty="n")
+```
+
+#### **3-7.圓餅圖**
+```{r message=FALSE, warning=FALSE}
+pie(Claims_Age,labels=c("<25","25-29","30-35",">35"),
+    main="Pie Chart of Age by Claims",col=c("white","lightgray","darkgrey","black"))
+
+percent = round(Claims_Age/sum(Claims_Age)*100)
+label = paste(paste(c("<25","25-29","30-35",">35"),":"), percent,"%",sep="")
+pie(Claims_Age,labels = label,  
+    main="Pie Chart of Age by Claims",col=c("white","lightgray","darkgrey","black"))
+
+#install.packages("plotrix")
+library(plotrix)
+
+pie3D(Claims_Age,labels=c("<25","25-29","30-35",">35"),explode=0.05,
+      main="3D Pie Chart of Age by Claims",labelcex=0.8,
+      col=c("white","lightgray","darkgrey","black"))
+```
+
